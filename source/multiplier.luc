@@ -1,0 +1,12 @@
+module multiplier (
+    //input clk,  // clock
+    //input rst,  // reset
+    input a[16],
+    input b[16],
+    output out[16]
+  ) {
+
+  always {
+    out = a * b;
+  }
+}

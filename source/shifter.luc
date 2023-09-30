@@ -1,0 +1,24 @@
+module shifter (
+    input a[16],
+    input b[4],
+    input alufn_signal[2],
+    output out[16]
+    
+  ) {
+    var unsignedb;
+  always {
+    //convert b in binary to unsigned b
+    unsignedb = $unsigned(b);
+    out = 0;
+    
+    //case 00 = shift left
+    //case 10 = shift left arithmetic dont need do since same as shift left    
+    //case 01 = shift rihgt
+    //case 11 = shift right arithmetic
+    case(alufn_signal[1:0]){
+      b00:out = a<<b;
+      b01:out = a>>b;
+      b10:out = $signed(a)>>>b;
+      default:out = a;
+  }
+}

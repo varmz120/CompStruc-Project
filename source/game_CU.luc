@@ -1,0 +1,352 @@
+module game_CU (
+    input clk,  // clock
+    input rst,
+    input decrease_timer,
+    input regfile_datain[16], //direct reading of regfile data from read_address_b
+    
+    //input custom_reset_button,
+    input custom_start_button,
+    
+    //input game_timer
+    
+    input ls_1,
+    input ls_1F,
+    input ls_2,
+    input ls_2F,
+    input ls_3,
+    input ls_3F,
+    input ls_4,
+    input ls_4F,
+    
+    output alufn[6],
+    output asel[3],
+    output bsel[3],
+    output alu_out_sel[2],
+    output regfile_write_address[4],
+    output regfile_read_address_a[4],
+    output regfile_read_address_b[4],
+    output we_regfile,
+    output debug[4],
+    output decimal_counter_increase,
+    output decimal_counter_rst
+  ) {
+
+  
+  .clk(clk){
+    fsm game_fsm={
+      START_SET_TIMER, 
+      IDLE, 
+      CHECK_TIMER, 
+      BRANCH_TIMER,
+      STORE_TIMER,
+	     DECREASE_TIMER,
+	     STOP_TIMER,
+      INCREASE_SCORE_1,
+      INCREASE_SCORE_1F,
+      INCREASE_SCORE_2,
+      INCREASE_SCORE_2F,
+      INCREASE_SCORE_3,
+      INCREASE_SCORE_3F,
+      INCREASE_SCORE_4, 
+      INCREASE_SCORE_4F,
+      INCREASE_BALLCOUNT,
+      CHECK_BALLCOUNT, 
+      BRANCH_BALLCOUNT,
+	     CALCULATE_SCORE,
+      RESET_COUNTER,
+      RESET_TOTAL_SCORE,
+      RESET_SCORE,
+      RESET_TIMER,
+      RESET_BALL,
+      RESET_START_SET_TIMER,
+      GAME_OVER
+      };
+    
+  }
+  
+  always {
+  
+    // standard setting unless otherwise overwritten by each case 
+    alufn = 0;
+    asel = 0; 
+    bsel = 0;
+    we_regfile = 0;
+    regfile_write_address = 1111;
+    regfile_read_address_a = 0000;
+    regfile_read_address_b = 0000;
+    alu_out_sel = 0;
+    
+    debug = b0000;
+    
+    decimal_counter_increase = 0;
+    decimal_counter_rst = 0;
+    
+    if (rst){
+        game_fsm.d = game_fsm.START_SET_TIMER;
+        decimal_counter_rst = 1;
+    }
+    else{
+      
+    case(game_fsm.q){
+    
+	game_fsm.START_SET_TIMER: 
+	// Ensure the game timer is set to 60
+        alufn = b001011;                            //Assign value 
+        asel = b01;                              //constant - 60
+        we_regfile = 1; 
+        regfile_write_address = b0010;           //write in timer reg 
+        regfile_read_address_b = b0010;          //direct read from timer reg
+        if (custom_start_button) {               //if start button pressed, go to IDLE
+        game_fsm.d = game_fsm.IDLE;}
+        else { game_fsm.d = game_fsm.START_SET_TIMER;}
+        
+
+	game_fsm.CHECK_TIMER: 
+	// Check if the timer is 0
+        alufn = b010000;                                //CMP
+
+    	//compare Reg[timer] and special Reg[0x5]
+    	//0x5 is a special reg whose contents are always set to 0
+
+        asel = b00;                                  //Reading Ra
+        bsel = b00;                                  // Reading Rb
+        we_regfile = 1; 
+        regfile_write_address = b0011;               //write in temp reg - 0x3
+
+        //the value 0 or 1 is set in 0x3 depending on whether Reg[0x0] is 0
+
+        regfile_read_address_b = b0101;              // read from special reg that is empty 0x5
+        regfile_read_address_a = b0010;              //read from timer reg  
+        game_fsm.d = game_fsm.BRANCH_TIMER;
+
+
+	game_fsm.BRANCH_TIMER:
+	// Depending on whether timer is zero, branch to the different states 
+        we_regfile = 0; 
+        regfile_read_address_b = b0011;              //read from temp reg -0x3
+
+        //Reg[0x3] is 0 -> Timer is not 0
+        //Reg[0x3] is 1 -> Timer is 0
+
+        //if 1st bit is 0, then timer is not zero
+        if (~regfile_datain[0]){                      
+
+            game_fsm.d = game_fsm.DECREASE_TIMER;
+        }
+        //is 1st bit is 1, then timer is zero
+        else{
+            game_fsm.d =  game_fsm.STOP_TIMER;
+        }
+
+
+	game_fsm.DECREASE_TIMER:
+	//Decrease the timer by 1 
+        alufn = b000001;                            // SUB
+
+        //Subtracting 1 from Reg[0x0] is equivalent to adding -1 to Reg[0x0]
+
+        regfile_read_address_a = b0010;          // read from Timer reg - 0x0
+        asel = b00;                              //Reading Ra
+        bsel = b01;                              //constant = -1
+        we_regfile = 1;
+        regfile_write_address = b0010;          // write in timer reg
+        game_fsm.d = game_fsm.IDLE;
+
+
+	game_fsm.IDLE:
+        asel = b00;
+        bsel = b00;
+        we_regfile = 0;
+          
+        if(decrease_timer) {                      //edge detector for decrease timer triggered each rising edge
+         game_fsm.d = game_fsm.CHECK_TIMER;}
+            
+        if(ls_1) {
+         game_fsm.d = game_fsm.INCREASE_SCORE_1;}
+        
+        if(ls_2) {
+         game_fsm.d = game_fsm.INCREASE_SCORE_2;}
+            
+        if(ls_3) {
+         game_fsm.d = game_fsm.INCREASE_SCORE_3;}
+        
+        if(ls_4) {
+         game_fsm.d = game_fsm.INCREASE_SCORE_4;}
+          
+         
+        
+        //if start button is pressed, move to check timer state
+        //if timer value not equal to 60, move to check timer state
+
+
+	game_fsm.STOP_TIMER:
+	//Stop timer and display and use current time for further calculations
+
+        // Store Reg[0x0] as Reg[0x4] 
+        // Therefore the reg 0x4 will contain the current time
+
+        regfile_read_address_a = b0010;          // read from Timer reg
+        we_regfile = 1;
+        regfile_write_address = b0100;          // write into temp reg - 0x4
+        game_fsm.d = game_fsm.GAME_OVER;
+
+game_fsm.INCREASE_SCORE_1:
+         if(ls_1F) {game_fsm.d = game_fsm.INCREASE_SCORE_1F;}
+         else {game_fsm.d = game_fsm.INCREASE_SCORE_1;}
+	
+game_fsm.INCREASE_SCORE_1F:
+         alufn = b000000;                             
+         asel = b10; 
+         bsel = b00;                      
+         we_regfile = 1; 
+         regfile_write_address = b0000;                
+         regfile_read_address_b = b0000;
+         game_fsm.d = game_fsm.INCREASE_BALLCOUNT;
+    
+game_fsm.INCREASE_SCORE_2:
+         if(ls_2F) {game_fsm.d = game_fsm.INCREASE_SCORE_2F;}
+         else {game_fsm.d = game_fsm.INCREASE_SCORE_2;}
+          
+game_fsm.INCREASE_SCORE_2F:
+         alufn = b000000;                             
+         asel = b11;                                 //score for Hole 2
+         bsel = b00;                                 //read from rb data                    
+         we_regfile = 1; 
+         regfile_write_address = b0000;              //write into score regfile              
+         regfile_read_address_b = b0000;             //read from score regfile
+         game_fsm.d = game_fsm.INCREASE_BALLCOUNT;
+          
+game_fsm.INCREASE_SCORE_3:
+         if(ls_3F) {game_fsm.d = game_fsm.INCREASE_SCORE_3F;}
+         else {game_fsm.d = game_fsm.INCREASE_SCORE_3;}
+          
+game_fsm.INCREASE_SCORE_3F:
+         alufn = b000000;                             
+         asel = b00;                                 //read from ra data
+         bsel = b10;                                 //score for Hole 3
+         we_regfile = 1; 
+         regfile_write_address = b0000;              //write into score regfile                    
+         regfile_read_address_a = b0000;             //read from score regfile
+         game_fsm.d = game_fsm.INCREASE_BALLCOUNT;
+       
+game_fsm.INCREASE_SCORE_4:
+         if(ls_4F) {game_fsm.d = game_fsm.INCREASE_SCORE_4F;}
+         else {game_fsm.d = game_fsm.INCREASE_SCORE_4;}
+        
+          
+game_fsm.INCREASE_SCORE_4F:
+         alufn = b000000;                             
+         asel = b00; 
+         bsel = b11;                      
+         we_regfile = 1; 
+         regfile_write_address = b0000;                     
+         regfile_read_address_a = b0000; 
+         game_fsm.d = game_fsm.INCREASE_BALLCOUNT;
+
+
+	game_fsm.INCREASE_BALLCOUNT: 
+         alufn = b000000;                             
+         asel = b10;
+         bsel = b00;                         
+         we_regfile = 1; 
+         regfile_write_address = b0001;                     
+         regfile_read_address_b = b0001;
+         game_fsm.d = game_fsm.CHECK_BALLCOUNT;
+
+
+	game_fsm.CHECK_BALLCOUNT: 
+         alufn = b010000;                             
+         asel = b00;
+         bsel=b11;                         
+         we_regfile = 1; 
+         regfile_write_address = b0011;                     
+         regfile_read_address_a = b0011;
+         game_fsm.d = game_fsm.BRANCH_BALLCOUNT;
+
+	game_fsm.BRANCH_BALLCOUNT: 
+         regfile_read_address_b = b0011;
+         if(regfile_datain[0]){game_fsm.d=game_fsm.STOP_TIMER;}
+         else{game_fsm.d=game_fsm.IDLE;}
+
+	game_fsm.CALCULATE_SCORE: 
+    	   alufn = b011000; //MULT
+    	   asel = b00;
+    	   bsel = b00;
+    	   we_regfile = b1; 
+    	   regfile_read_address_a = b0111; //ra = (Timer)             
+    	   regfile_read_address_b = b0000; //rb = (Score)
+    	   regfile_write_address = b0000;  //rc = (Score)
+    	   alu_out_sel = b00;
+
+    	   game_fsm.d = game_fsm.STOP_TIMER;
+        
+	game_fsm.GAME_OVER: //reset Ox4
+
+    	// Reading from button_conditioner data.
+    	// RESET BUTTON == reset_button
+   	// if reset_button == 1, go to RESET_SCORE
+    	// if reset_button == 0, go to GAME_OVER
+
+    	   if (rst) {
+          	asel = b00;   
+          	we_regfile = b1;
+          	regfile_read_address_a = b101; //Ox5
+          	regfile_write_address = b100;
+          	alu_out_sel = b00;
+          	game_fsm.d = game_fsm.RESET_TOTAL_SCORE;
+     	   }
+    	   else{
+          	game_fsm.d = game_fsm.GAME_OVER;
+    	   }
+
+	game_fsm.RESET_TOTAL_SCORE:
+
+    	// Same reset process --> changing rc address.
+
+    	   asel = b00;
+    	   we_regfile = b1;
+    	   regfile_read_address_a = b101; //Ox5
+    	   regfile_write_address = b011; //Ox3
+    	   alu_out_sel = b00;
+    	   game_fsm.d = game_fsm.RESET_SCORE;
+
+	game_fsm.RESET_SCORE:
+
+    	   asel = b00;
+     	   we_regfile = b1;
+    	   regfile_read_address_a = b101; //Ox5
+    	   regfile_write_address = b010; //Ox2
+    	   alu_out_sel = b00;
+    	   game_fsm.d = game_fsm.RESET_TIMER;
+
+	game_fsm.RESET_TIMER:
+
+    	   asel = b00;
+    	   we_regfile = b1;
+    	   regfile_read_address_a = b101; //Ox5
+    	   regfile_write_address = b000; //Ox0
+    	   alu_out_sel = b00;
+    	   game_fsm.d = game_fsm.RESET_BALL;
+
+	game_fsm.RESET_BALL:
+
+    	   asel = b00;
+    	   we_regfile = b1;
+    	   regfile_read_address_a = b101; //Ox5
+    	   regfile_write_address = b001; //Ox1
+    	   alu_out_sel = b00;
+    	   game_fsm.d = game_fsm.RESET_START_SET_TIMER;
+
+
+      }
+    } 
+  }
+}
+
+// Timer reg - 0x0 - b0000
+// Number of balls detected - 0x1 - b0001
+// Total score - 0x2 - b0010
+// Temp regs:
+//  0x3 - b0011
+//  0x4 - b0100
+// Special reg - 0x5 - b0101

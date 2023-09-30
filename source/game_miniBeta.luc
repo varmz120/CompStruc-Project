@@ -1,0 +1,106 @@
+module game_miniBeta (    
+  input clk,  // clock
+  input rst,  // reset    
+  input custom_start_button,
+  //input custom_reset_button,
+  input ls_1, 
+  input ls_1F,   
+  input ls_2,
+  input ls_2F,
+  input ls_3,
+  input ls_3F,
+  input ls_4,
+  input ls_4F,
+  output timer_out[16],
+  output score_out[16],
+  output ball_count[16],
+  output debug_slowclock  
+  ) 
+
+  {
+    
+  sig inputAlu_a[16];  
+  sig inputAlu_b[16];
+    
+  alu game_alu;
+  
+    .clk(clk) {
+      //edge_detector game_timer_detector(#RISE(1), #FALL(0));  
+       edge_detector edge_dt_slowtimer (#RISE(1), #FALL(0));
+      .rst(rst) {          
+        game_CU game_controlunit;
+        game_miniRegfiles regfiles;  
+        counter slow_timer(#SIZE(1), #DIV(26));  
+      }  
+    }
+  
+  
+  
+  always {
+    //edge detectors      
+    //game_timer_detector.in = slow_timer.value; //60s timer detector 
+    //pass timer signal to CU unit 
+    //game_controlunit.game_timer = game_timer_detector.out;  
+    //pass start button signal to CU unit      
+    game_controlunit.custom_start_button = custom_start_button;
+    //game_controlunit.custom_reset_button = custom_reset_button;
+    //pass light sensor signal to CU unit      
+    game_controlunit.ls_1 = ls_1;
+    game_controlunit.ls_1F = ls_1F;
+    game_controlunit.ls_2 = ls_2; 
+    game_controlunit.ls_2F = ls_2F;     
+    game_controlunit.ls_3 = ls_3;
+    game_controlunit.ls_3F = ls_3F;
+    game_controlunit.ls_4 = ls_4;
+    game_controlunit.ls_4F = ls_4F;
+    
+    edge_dt_slowtimer.in = slow_timer.value;
+    game_controlunit.decrease_timer = edge_dt_slowtimer.out;
+          
+ 
+    //setup REGFILE Unit      
+    regfiles.we = game_controlunit.we_regfile;
+    regfiles.write_address = game_controlunit.regfile_write_address;  
+    regfiles.read_address_a = game_controlunit.regfile_read_address_a;      
+    regfiles.read_address_b = game_controlunit.regfile_read_address_b;
+    
+    //bootstrap reg_b output to CU for convenient branching conditions
+    game_controlunit.regfile_datain = regfiles.out_b;  
+    
+    //asel mux      
+    case(game_controlunit.asel){
+      b00: inputAlu_a = regfiles.out_a; //Ra data          
+      b01: inputAlu_a = 60; //constant 60 seconds
+      b10: inputAlu_a = 1; //constant Hole 1 score          
+      b11: inputAlu_a = 2; //constant Hole 2 score
+      default: inputAlu_a = 0;      
+      }
+    
+    //bsel mux
+    case(game_controlunit.bsel){          
+      b00: inputAlu_b = regfiles.out_b;
+      b01: inputAlu_b = 1; //constant Timer -1           
+      b10: inputAlu_b = 4; //constant Hole 3 score
+      b11: inputAlu_b = 10; //constant Hole 4 score          
+      default: inputAlu_b = 0;
+      }
+      
+    //ALU
+    game_alu.a = inputAlu_a;
+    game_alu.b = inputAlu_b;
+    game_alu.alufn_signal = game_controlunit.alufn;
+    
+    //wdsel mux      
+    case (game_controlunit.alu_out_sel) {
+      b01: regfiles.data = b1111111111111111; //hard-coded start timer signal
+      b10: regfiles.data = b0000000000001111; //hard-coded game over signal          
+      default: regfiles.data = game_alu.out;
+      } 
+     
+    //for debugging
+    ball_count = regfiles.ball_count_out;      
+    timer_out = regfiles.out;
+    score_out = regfiles.total_score;//take score value from regfile output
+    debug_slowclock = slow_timer.value; 
+    }
+}

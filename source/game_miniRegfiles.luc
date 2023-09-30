@@ -1,0 +1,68 @@
+module game_miniRegfiles (    
+  input clk, //clock
+  input rst, //reset    
+  input write_address[4], 
+  input we, //write enable    
+  input data[16],
+  input read_address_a[4], //address port a
+  input read_address_b[4], //address port b    
+  output out_a[16], //read port a
+  output out_b[16], //read port b
+  //debug    
+  output out[16],
+  output total_score[16],
+  output ball_count_out[16]  
+  )
+  
+  {    
+  .clk(clk) {
+    .rst(rst){            
+      dff score[16](#INIT(0));
+      dff ball_count[16];            
+      dff current_timer[16];
+      dff temp_var1[16];  
+      dff temp_var2[16];
+      dff temp_var3[16];     
+      }
+    }
+   always {
+    //write port        
+    if (we) {
+      case(write_address) {                
+        b0000: score.d = data; 
+        b0001: ball_count.d = data;                
+        b0010: current_timer.d = data;
+        b0011: temp_var1.d = data;                
+        b0111: temp_var2.d = data;
+        b1000: temp_var3.d = data;               
+      }        
+     }
+     
+      //read port a
+      case(read_address_a) {            
+        b0000: out_a = score.q;
+        b0001: out_a = ball_count.q;            
+        b0010: out_a = current_timer.q;
+        b0011: out_a = temp_var1.q;            
+        b0111: out_a = temp_var2.q;
+        b1000: out_a = temp_var3.q;            
+        default: out_a = 0;        
+        }
+        
+        //read port b        
+        case(read_address_b) {
+          b0000: out_b = score.q;            
+          b0001: out_b = ball_count.q;
+          b0010: out_b = current_timer.q;            
+          b0011: out_b = temp_var1.q;
+          b0111: out_b = temp_var2.q;            
+          b1000: out_b = temp_var3.q;         
+          default: out_b = 0;
+        }
+
+      //For debugging
+      ball_count_out = ball_count.q;        
+      total_score[15:0] = score.q;
+      out = current_timer.q;    
+    }
+}

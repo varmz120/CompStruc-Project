@@ -1,0 +1,28 @@
+module boolean (
+    input a[16],
+    input b[16],
+    input alufn_signal[6],
+    output out[16]
+  ) {
+
+  
+  always {
+
+    case(alufn_signal[2:0]){
+    
+      b000: out = a & b; //AND 
+      b001: out = a | b; //OR
+      b010: out = a ^ b; //XOR
+      b011: out = a; //assignment operation
+      //additional function, NOR 
+      b101: out = ~(a | b);
+      //additional function, NAND gate to ...
+      b111: out = ~(a & b);
+
+      default:
+        out = 16b0; //default result
+    }
+   
+  }
+}
+

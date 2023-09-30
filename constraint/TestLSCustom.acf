@@ -1,0 +1,46 @@
+pin clk CLOCK;clock clk 100MHz;
+pin rst_n RESET;
+
+// flip the Tx/Rx lines
+pin usb_rx USB_TX;
+pin usb_tx USB_RX;
+
+pin custom_start_button B28 pulldown;
+//pin custom_reset_button B27 pulldown;
+
+pin ls_1 B30 pulldown;
+pin ls_2 B31 pulldown;
+pin ls_3 B33 pulldown;
+pin ls_4 B34 pulldown;
+
+pin io_button[0] B23 pulldown;
+pin io_button[1] B24 pulldown;
+pin io_button[2] C49 pulldown;
+
+pin io_sel[0] A9;
+pin io_sel[1] A8;
+pin io_sel[2] A42;
+pin io_sel[3] A43;
+
+pin io_sel2[0] B9;
+pin io_sel2[1] B8;
+pin io_sel2[2] B42;
+pin io_sel2[3] B43;
+
+pin io_seg[0] A5; //OG A 
+pin io_seg[1] A6; //OG B 
+pin io_seg[2] A48; //OG C 
+pin io_seg[3] A46; //OG D 
+pin io_seg[4] A45; //OG E 
+pin io_seg[5] A3; //OG F 
+pin io_seg[6] A2; //OG G 
+pin io_seg[7] A49; //OG DP
+
+pin io_seg2[0] B36; //OG A 
+pin io_seg2[1] B6; //OG B 
+pin io_seg2[2] B48; //OG C 
+pin io_seg2[3] B46; //OG D 
+pin io_seg2[4] B45; //OG E 
+pin io_seg2[5] B3; //OG F 
+pin io_seg2[6] B2; //OG G 
+pin io_seg2[7] B49; //OG DP

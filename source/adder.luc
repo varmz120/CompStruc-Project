@@ -1,0 +1,39 @@
+// 16-bit adder/subtractor unit 
+module adder (
+    // input clk,  // clock
+    // input rst,  // reset
+    input alufn_signal,
+    input a[16],
+    input b[16],
+    output out[16],
+    output z,
+    output v,
+    output n
+  ) {
+
+  sig sum[16]; // sum has bits from 0..15
+  
+  always {
+    // only if alufn0 is 0 then add, if 1 then subtract
+    case(alufn_signal) {
+      b0:
+        sum = a+b;
+        v = (a[15] & b[15] & ~sum[15]) | (~a[15] & ~b[15] & sum[15]); // b is positive
+      b1:
+        sum = a-b;
+        v = (a[15] & ~b[15] & ~sum[15]) | (~a[15] & b[15] & sum[15]); // b is negative
+      default:
+        sum = a+b;
+        v = (a[15] & b[15] & ~sum[15]) | (~a[15] & ~b[15] & sum[15]);
+    }
+    
+    // output sum
+    out = sum[15:0];
+    
+    // n is true when sum is negative
+    n = sum[15]; // negative when most significant bit is 1
+    
+    // z is true when S outputs are all 0
+    z =  ~|sum; // NOR gate with S as inputs return 1 only when inputs are all 0 
+  }
+}

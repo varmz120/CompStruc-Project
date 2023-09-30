@@ -1,0 +1,438 @@
+module au_top (    
+  input clk,              // 100MHz clock
+  input rst_n,            // reset button (active low)    
+  input usb_rx,           // USB->Serial input
+  input io_button [3],    
+  input custom_start_button,
+  //input custom_reset_button,
+  input ls_1, 
+  input ls_2,
+  input ls_3,
+  input ls_4,
+  output usb_tx,          // USB->Serial output 
+  //output io_led [3][8],   
+  output io_seg [8],      // 7-segment LEDs on IO Shield
+  output io_sel [4],      // Digit select on IO Shield 
+  output io_seg2 [8],
+  output io_sel2 [4],
+  output score[16]
+  //output timer[16]
+  ) {  
+  
+  sig rst;
+  sig constant1;
+  sig constant2;
+  //define clk and rst block to sync multi_seven_seg and game_miniBeta with rest of FPGA  
+  .clk(clk){ 
+    .rst(rst){          
+      multi_seven_seg seg;
+      multi_seven_seg seg2;
+      game_miniBeta gameMachine;      
+    }
+  
+  //define reset_condition module with the name reset_cond  
+  reset_conditioner reset_cond;
+  
+  //define rise and fall edge detector for LS inputs defined in game_miniBeta
+  edge_detector edge_dt_custom_start_button (#RISE(1), #FALL(0));
+  edge_detector edge_dt_ls_1 (#RISE(1), #FALL(0));
+  edge_detector edge_dt_ls_1F (#RISE(0), #FALL(1));  
+  edge_detector edge_dt_ls_2 (#RISE(1), #FALL(0));
+  edge_detector edge_dt_ls_2F (#RISE(0), #FALL(1));
+  edge_detector edge_dt_ls_3 (#RISE(1), #FALL(0));
+  edge_detector edge_dt_ls_3F (#RISE(0), #FALL(1));  
+  edge_detector edge_dt_ls_4 (#RISE(1), #FALL(0));
+  edge_detector edge_dt_ls_4F (#RISE(0), #FALL(1));
+    
+  button_conditioner btn_cond_start;
+  button_conditioner ls_cond_1;
+  button_conditioner ls_cond_1F;
+  button_conditioner ls_cond_2; 
+  button_conditioner ls_cond_2F; 
+  button_conditioner ls_cond_3;
+  button_conditioner ls_cond_3F;
+  button_conditioner ls_cond_4;
+  button_conditioner ls_cond_4F;   
+}
+   bin_to_dec btd(#DIGITS(4),#LEADING_ZEROS(1));
+   //bin_to_dec btd2(#DIGITS(4),#LEADING_ZEROS(1));
+  
+  
+  always {      
+    constant1 = 15;
+    constant2 = 10;
+    reset_cond.in = ~rst_n;
+    rst = reset_cond.out;
+            
+    usb_tx = usb_rx; //loop serial port of Alchitry IO
+    io_seg = 8hff;   // turn segments off
+    io_sel = 4hf;    // select no digits
+    io_seg2 = 8hff;
+    io_sel2 = 4hf;  
+    ls_cond_1.in=ls_1; //to reduce the bouncing effects of your button
+    ls_cond_1F.in = ls_1;       
+    ls_cond_2.in=ls_2;
+    ls_cond_2F.in = ls_2;
+    ls_cond_3.in = ls_3;   
+    ls_cond_3F.in = ls_3;   
+    ls_cond_4.in = ls_4;
+    ls_cond_4F.in = ls_4;
+    btn_cond_start.in = custom_start_button;
+    //btn_cond_reset.in = custom_reset_button;
+
+    edge_dt_ls_1.in=ls_cond_1.out; //get the edge of button press 
+    edge_dt_ls_1F.in = ls_cond_1F.out;     
+    edge_dt_ls_2.in=ls_cond_2.out;
+    edge_dt_ls_2F.in=ls_cond_2F.out;
+    edge_dt_ls_3.in=ls_cond_3.out; 
+    edge_dt_ls_3F.in = ls_cond_3F.out;     
+    edge_dt_ls_4.in=ls_cond_4.out;
+    edge_dt_ls_4F.in = ls_cond_4F.out;
+    edge_dt_custom_start_button.in = btn_cond_start.out;
+    //edge_dt_custom_reset_button.in = btn_cond_reset.out;
+    
+     case(gameMachine.timer_out) {
+       8h3C:
+        seg.values = {4h0, 4h0, 4h6, 4h0};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8h3B:
+        seg.values = {4h0, 4h0, 4h5, 4h9};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+
+        
+      8h3A:
+        seg.values = {4h0, 4h0, 4h5, 4h8};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8h39:
+        seg.values = {4h0, 4h0, 4h5, 4h7};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8h38:
+        seg.values = {4h0, 4h0, 4h5, 4h6};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;     
+        
+      8h37:
+        seg.values = {4h0, 4h0, 4h5, 4h5};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8h36:
+        seg.values = {4h0, 4h0, 4h5, 4h4};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8h35:
+        seg.values = {4h0, 4h0, 4h5, 4h3};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8h34:
+        seg.values = {4h0, 4h0, 4h5, 4h2};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8h33:
+        seg.values = {4h0, 4h0, 4h5, 4h1};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8h32:
+        seg.values = {4h0, 4h0, 4h5, 4h0};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8h31:
+        seg.values = {4h0, 4h0, 4h4, 4h9};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8h30:
+        seg.values = {4h0, 4h0, 4h4, 4h8};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8h2F:
+        seg.values = {4h0, 4h0, 4h4, 4h7};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8h2E:
+        seg.values = {4h0, 4h0, 4h4, 4h6};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8h2D:
+        seg.values = {4h0, 4h0, 4h4, 4h5};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8h2C:
+        seg.values = {4h0, 4h0, 4h4, 4h4};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8h2B:
+        seg.values = {4h0, 4h0, 4h4, 4h3};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8h2A:
+        seg.values = {4h0, 4h0, 4h4, 4h2};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8h29:
+        seg.values = {4h0, 4h0, 4h4, 4h1};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8h28:
+        seg.values = {4h0, 4h0, 4h4, 4h0};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8h27:
+        seg.values = {4h0, 4h0, 4h3, 4h9};
+        io_seg = ~seg.seg;
+        io_sel[1:0] = ~seg.sel;
+        
+      8h26:
+        seg.values = {4h0, 4h0, 4h3, 4h8};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8h25:
+        seg.values = {4h0, 4h0, 4h3, 4h7};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8h24:
+        seg.values = {4h0, 4h0, 4h3, 4h6};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8h23:
+        seg.values = {4h0, 4h0, 4h3, 4h5};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8h22:
+        seg.values = {4h0, 4h0, 4h3, 4h4};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8h21:
+        seg.values = {4h0, 4h0, 4h3, 4h3};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+      
+      8h20:
+        seg.values = {4h0, 4h0, 4h3, 4h2};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8h1F:
+        seg.values = {4h0, 4h0, 4h3, 4h1};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;  
+  
+      8h1E:
+        seg.values = {4h0, 4h0, 4h3, 4h0};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8h1D:
+        seg.values = {4h0, 4h0, 4h2, 4h9};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8h1C:
+        seg.values = {4h0, 4h0, 4h2, 4h8};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8h1B:
+        seg.values = {4h0, 4h0, 4h2, 4h7};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8h1A:
+        seg.values = {4h0, 4h0, 4h2, 4h6};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;   
+        
+      8h19:
+        seg.values = {4h0, 4h0, 4h2, 4h5};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8h18:
+        seg.values = {4h0, 4h0, 4h2, 4h4};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8h17:
+        seg.values = {4h0, 4h0, 4h2, 4h3};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8h16:
+        seg.values = {4h0, 4h0, 4h2, 4h2};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8h15:
+        seg.values = {4h0, 4h0, 4h2, 4h1};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8h14:
+        seg.values = {4h0, 4h0, 4h2, 4h0};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8h13:
+        seg.values = {4h0, 4h0, 4h1, 4h9};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8h12:
+        seg.values = {4h0, 4h0, 4h1, 4h8};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8h11:
+        seg.values = {4h0, 4h0, 4h1, 4h7};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8h10:
+        seg.values = {4h0, 4h0, 4h1, 4h6};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8hF:
+        seg.values = {4h0, 4h0, 4h1, 4h5};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8hE:
+        seg.values = {4h0, 4h0, 4h1, 4h4};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8hD:
+        seg.values = {4h0, 4h0, 4h1, 4h3};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8hC:
+        seg.values = {4h0, 4h0, 4h1, 4h2};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8hB:
+        seg.values = {4h0, 4h0, 4h1, 4h1};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8hA:
+        seg.values = {4h0, 4h0, 4h1, 4h0};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8h9:
+        seg.values = {4h0, 4h0, 4h0, 4h9};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8h8:
+        seg.values = {4h0, 4h0, 4h0, 4h8};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8h7:
+        seg.values = {4h0, 4h0, 4h0, 4h7};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8h6:
+        seg.values = {4h0, 4h0, 4h0, 4h6};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8h5:
+        seg.values = {4h0, 4h0, 4h0, 4h5};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8h4:
+        seg.values = {4h0, 4h0, 4h0, 4h4};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8h3:
+        seg.values = {4h0, 4h0, 4h0, 4h3};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+      
+      8h2:
+        seg.values = {4h0, 4h0, 4h0, 4h2};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      8h1:
+        seg.values = {4h0, 4h0, 4h0, 4h1};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+      
+      8h0:
+        seg.values = {4h0, 4h0, 4h0, 4h0};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        
+      default:
+        seg.values = {4h0, 4h0, 4h6, 4h0};
+        seg2.values = {4h0, 4h0, 4h6, 4h0};
+        io_seg = ~seg.seg;
+        io_sel = ~seg.sel;
+        io_seg2 = ~seg.seg;
+        io_sel2 = ~seg.sel;
+}
+
+    
+            
+    gameMachine.ls_1 = edge_dt_ls_1.out;
+    gameMachine.ls_1F = edge_dt_ls_1F.out;
+    gameMachine.ls_2 = edge_dt_ls_2.out;  
+    gameMachine.ls_2F = edge_dt_ls_2F.out;    
+    gameMachine.ls_3 = edge_dt_ls_3.out;
+    gameMachine.ls_3F = edge_dt_ls_3F.out;
+    gameMachine.ls_4 = edge_dt_ls_4.out;
+    gameMachine.ls_4F = edge_dt_ls_4F.out;
+    gameMachine.custom_start_button = edge_dt_custom_start_button.out;
+    //gameMachine.custom_reset_button = edge_dt_custom_reset_button.out;
+          
+    //show counter value at io_led
+    //io_led[2] = gameMachine.ball_count[7:0];
+    //io_led[1] = gameMachine.ball_count[15:8];
+    //io_led[0] = gameMachine.debug_slowclock;
+    
+    //update 7 segments for score and timer      
+    //timer = gameMachine.timer_out;  //need to change to finalised name
+    score = gameMachine.score_out; //need to change to finalised name   
+    //io_seg = ~seg.seg; //7 seg on shield display output according to segments selected in multi_seven_segment
+    //io_sel = ~seg.sel; //digit to be displayed takes digits chosen in multi_seven_segment
+    btd.value = gameMachine.score_out;
+    seg.values = btd.digits;
+    seg2.values = btd.digits;
+    io_seg = ~seg.seg; //might need to define separate segment selected from multi_seven_segment
+    io_sel = ~seg.sel; //might need to define separate digits chosen in multi_seven_segments   
+}
